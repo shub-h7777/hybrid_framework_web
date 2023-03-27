@@ -11,3 +11,7 @@ test_invalid_login_data = [
 ]
 
 test_case_3_data = read_utils.get_excel_as_list("../test_data/excel.xlsx", "Sheet1")
+
+test_case_4_data = read_utils.get_excel_as_list("../test_data/excel.xlsx", "Sheet2")
+
+test_case_csv_data=read_utils.get_csv_as_list("../test_data/test_case_5_data.csv",",")

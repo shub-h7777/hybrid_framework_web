@@ -4,24 +4,24 @@ import pytest
 from assertpy import assert_that
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.select import Select
 
-import test_data
 from base.webdriver_listener import WebDriverWrapper
 from utilities import data_source
 
 
 class TestShoppingCart(WebDriverWrapper):
 
-    @pytest.mark.parametrize("email,password"
-        ,data_source.test_case_3_data
+    @pytest.mark.parametrize("email,password,null_shopping_cart"
+        , data_source.test_case_3_data
                              )
-    def test_add_books(self, email, password):
+    def test_add_books(self, email, password, null_shopping_cart):
         self.driver.find_element(By.LINK_TEXT, "Log in").click()
         self.driver.find_element(By.ID, "Email").send_keys(email)
         self.driver.find_element(By.ID, "Password").send_keys(password)
         self.driver.find_element(By.XPATH, "//input[@value='Log in']").click()
 
-        # verify Account Enail is same which we used during login
+        # verify Account Email is same which we used during login
         account_email = self.driver.find_element(By.LINK_TEXT, email).text
         assert_that(account_email).is_equal_to(email)
 
@@ -29,8 +29,8 @@ class TestShoppingCart(WebDriverWrapper):
         action = ActionChains(self.driver)
         action.move_to_element(self.driver.find_element(By.XPATH, "//span[text()='Shopping cart']")).perform()
         shopping_cart_null_text = self.driver.find_element(By.XPATH,
-                                                           "//div[contains(text(),'You have no items in your shopping cart.')]").text
-        assert_that(shopping_cart_null_text).is_equal_to("You have no items in your shopping cart.")
+                                                           f"//div[contains(text(),'{null_shopping_cart}')]").text
+        assert_that(shopping_cart_null_text).is_equal_to(null_shopping_cart)
 
         self.driver.find_element(By.XPATH, "(//a[normalize-space()='Books'])[3]").click()
         self.driver.find_element(By.XPATH, "//input[@value='Add to cart']").click()
@@ -50,10 +50,10 @@ class TestShoppingCart(WebDriverWrapper):
 
         time.sleep(5)
 
-    @pytest.mark.parametrize("email,password"
-        , data_source.test_case_3_data
+    @pytest.mark.parametrize("email,password,null_shopping_cart,book_name"
+        , data_source.test_case_4_data
                              )
-    def test_books_are_in_shopping_cart_after_relogin(self,email,password):
+    def test_books_are_in_shopping_cart_after_relogin(self, email, password, null_shopping_cart, book_name):
         self.driver.find_element(By.LINK_TEXT, "Log in").click()
         self.driver.find_element(By.ID, "Email").send_keys(email)
         self.driver.find_element(By.ID, "Password").send_keys(password)
@@ -65,7 +65,7 @@ class TestShoppingCart(WebDriverWrapper):
 
         action = ActionChains(self.driver)
         action.move_to_element(self.driver.find_element(By.XPATH, "//span[text()='Shopping cart']")).perform()
-        book_name = self.driver.find_element(By.XPATH, "//div/a[text()='Computing and Internet']").text
+        book_name = self.driver.find_element(By.XPATH, f"//div/a[text()='{book_name}']").text
         assert_that("Computing and Internet").is_equal_to(book_name)
         book_price = self.driver.find_element(By.XPATH, "//div[@class='price']/span").text
         print(book_price)
@@ -85,9 +85,50 @@ class TestShoppingCart(WebDriverWrapper):
 
         action.move_to_element(self.driver.find_element(By.XPATH, "//span[text()='Shopping cart']")).perform()
         shopping_cart_null_text = self.driver.find_element(By.XPATH,
+                                                           f"//div[contains(text(),'{null_shopping_cart}')]").text
+        assert_that(shopping_cart_null_text).is_equal_to(null_shopping_cart)
+
+        # log out and verify login is displayed
+        self.driver.find_element(By.LINK_TEXT, "Log out").click()
+        self.driver.find_element(By.LINK_TEXT, "Log in").is_displayed()
+
+
+class TestApparelAndShoes(WebDriverWrapper):
+    @pytest.mark.parametrize(
+        "email,password,category_name,dress_name", data_source.test_case_csv_data
+    )
+    def test_apparel_shoes(self, email, password, category_name, dress_name):
+        self.driver.find_element(By.LINK_TEXT, "Log in").click()
+        self.driver.find_element(By.ID, "Email").send_keys(email)
+        self.driver.find_element(By.ID, "Password").send_keys(password)
+        self.driver.find_element(By.XPATH, "//input[@value='Log in']").click()
+
+        # verify Account Enail is same which we used during login
+        account_email = self.driver.find_element(By.LINK_TEXT, email).text
+        assert_that(account_email).is_equal_to(email)
+
+        # Main Operation
+        self.driver.find_element(By.XPATH, f"(//a[contains(text(),'{category_name}')])[3]").click()
+        self.driver.find_element(By.LINK_TEXT, dress_name).click()
+        Select(self.driver.find_element(By.NAME, "product_attribute_5_7_1")).select_by_visible_text("2X")
+        self.driver.find_element(By.XPATH, "//input[contains(@id,'add-to-cart')]").click()
+        assert_that(self.driver.find_element(By.XPATH, "//p[@class='content']").text).is_equal_to(
+            "The product has been added to your shopping cart")
+        action = ActionChains(self.driver)
+        action.move_to_element(self.driver.find_element(By.XPATH, "//span[@class='cart-label']")).perform()
+        assert_that(self.driver.find_element(By.XPATH, "//div[@class='name']").text).is_equal_to(dress_name)
+        assert_that(self.driver.find_element(By.XPATH, "(//*[@class='attributes'])[1]").text).contains("2X")
+        self.driver.find_element(By.XPATH, "//input[@value='Go to cart']").click()
+        self.driver.find_element(By.NAME, "removefromcart").click()
+        self.driver.find_element(By.NAME, "updatecart").click()
+
+        action.move_to_element(self.driver.find_element(By.XPATH, "//span[text()='Shopping cart']")).perform()
+        shopping_cart_null_text = self.driver.find_element(By.XPATH,
                                                            "//div[contains(text(),'You have no items in your shopping cart.')]").text
         assert_that(shopping_cart_null_text).is_equal_to("You have no items in your shopping cart.")
 
         # log out and verify login is displayed
         self.driver.find_element(By.LINK_TEXT, "Log out").click()
         self.driver.find_element(By.LINK_TEXT, "Log in").is_displayed()
+
+        time.sleep(5)
